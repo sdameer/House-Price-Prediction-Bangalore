@@ -13,8 +13,6 @@ with open("columns.json", "r") as f:
     location_columns = columns['location_columns']
 
 # Function to predict price
-
-
 def predict_price(location, sqft, bath, bhk):
     # Initialize feature array with zeros
     x = np.zeros(len(data_columns))
@@ -26,7 +24,6 @@ def predict_price(location, sqft, bath, bhk):
 
     # Check if the location exists in the columns and set the corresponding index
     if location in data_columns:
-        # Get the index of the location
         loc_index = data_columns.index(location)
         x[loc_index] = 1  # Set the location feature to 1
     else:
@@ -36,13 +33,17 @@ def predict_price(location, sqft, bath, bhk):
     # Make prediction
     price = model.predict([x])[0]
 
-# Convert price to lakhs or crores
+    # Handle negative predictions
+    if price < 0:
+        return "Invalid input! Please check the details and try again."
+
+    # Convert price to lakhs or crores
     if price >= 100:  # If price is above 1 crore (₹1,00,00,000)
         price_str = f"₹ {price / 100:.2f} Crore"
     elif price >= 1:  # If price is above 1 lakh (₹1,00,000)
         price_str = f"₹ {price:.2f} Lakh"
     else:
-        price_str = f"₹ {price * 100:.2f} Thousand"  # This is just an optional case if needed
+        price_str = f"₹ {price * 100:.2f} Thousand"  # Optional case if needed
 
     return price_str
 
@@ -52,9 +53,8 @@ st.title('House Price Prediction')
 st.header('Enter the details to predict the price of the house')
 
 # Dropdown for location selection
-location_columns = [location.replace('location_', '') for location in location_columns]
-location = st.selectbox('Select the location', location_columns)
-
+cleaned_locations = [location.replace('location_', '') for location in location_columns]
+location = st.selectbox('Select the location', cleaned_locations)
 
 # Inputs for square footage, bathrooms, and bedrooms
 sqft = st.number_input('Enter the square footage', min_value=100, max_value=10000, step=10)
@@ -65,4 +65,7 @@ bhk = st.number_input('Enter the number of bedrooms', min_value=1, max_value=10,
 if st.button('Predict Price'):
     price = predict_price(f"location_{location}", sqft, bath, bhk)
     if price is not None:
-        st.success(f'The predicted price of the house is ₹ {price}')
+        if "Invalid input" in price:
+            st.error(price)
+        else:
+            st.success(f'The predicted price of the house is {price}')
